@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <base href="https://raw.githubusercontent.com/MasterPDiddy9/ProjectHNAR-HTML5/main/">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Project HNAR</title>
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="ProjectHNAR-HTML5-Shipping.css">
+  <style>
+    html, body { min-height: 100%; }
+    #compilingmessage { z-index: 2; }
+    .launcher-note { color: #ddd; text-align: center; margin: 8px auto; max-width: 900px; }
+  </style>
+  <script src="jquery/jquery-2.1.3.min.js"></script>
+  <script src="bootstrap/js/bootstrap.min.js"></script>
+</head>
+<body>
+  <div class="wrapper" id="mainarea">
+    <div class="alert alert-warning centered-axis-xy" style="min-height:20px;display:none" role="alert" id="compilingmessage">
+      <div id="loadTasks"></div>
+    </div>
+    <canvas tabindex="0" id="canvas" class="emscripten" oncontextmenu="event.preventDefault()" style="display:none"></canvas>
+  </div>
+  <div class="buttonarea text-center" id="buttonarea">
+    <button type="button" id="pause" class="btn btn-primary" onclick="try { Module.pauseMainLoop(); $('#resume').show().focus(); $('#pause').hide(); } catch(e) { console.error(e); }" title="Pause" style="display:none">Pause</button>
+    <button type="button" id="resume" class="btn btn-primary" onclick="try { Module.resumeMainLoop(); $('#pause').show().focus(); $('#resume').hide(); } catch(e) { console.error(e); }" title="Resume" style="display:none">Resume</button>
+    <button type="button" id="clear_indexeddb" class="btn btn-primary" onclick="try { deleteIndexedDBStorage(); } catch(e) { console.error(e); }" title="Clear browser cache" style="display:none">Clear browser cache</button>
+    <button type="button" id="fullscreen_request" class="btn btn-primary" title="Fullscreen" style="display:none">Fullscreen</button>
+  </div>
+  <p class="launcher-note">This launcher loads the game files from GitHub. Keep this file and an internet connection available while playing.</p>
+  <div class="texthalf text-normal jumbotron" id="logwindow" style="display:none"></div>
+
+  <script>
+    var Module = window.Module || {};
+    Module.preRun = Module.preRun || [];
+    Module.preRun.push(function() {
+      Module._UE_SaveGame = function(slotNamePtr, userIndex, dataPtr, dataSize) {
+        try {
+          var slotName = UTF8ToString(slotNamePtr);
+          var data = new Uint8Array(Module.HEAPU8.buffer, dataPtr, dataSize);
+          var encoded = btoa(String.fromCharCode.apply(null, new Uint8Array(data)));
+          localStorage.setItem('UESave_' + userIndex + '_' + slotName, encoded);
+          console.log('[SaveGame] Saved slot:', slotName, 'size:', dataSize);
+          return 1;
+        } catch (e) { console.error('[SaveGame] Save failed:', e); return 0; }
+      };
+      Module._UE_LoadGame = function(slotNamePtr, userIndex, outDataPtrPtr, outDataSizePtr) {
+        try {
+          var slotName = UTF8ToString(slotNamePtr);
+          var encoded = localStorage.getItem('UESave_' + userIndex + '_' + slotName);
+          if (!encoded) return 0;
+          var binary = atob(encoded);
+          var bytes = new Uint8Array(binary.length);
+          for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          var ptr = Module._malloc(bytes.length);
+          Module.HEAPU8.set(bytes, ptr);
+          Module.HEAP32[outDataPtrPtr >> 2] = ptr;
+          Module.HEAP32[outDataSizePtr >> 2] = bytes.length;
+          console.log('[SaveGame] Loaded slot:', slotName, 'size:', bytes.length);
+          return 1;
+        } catch (e) { console.error('[SaveGame] Load failed:', e); return 0; }
+      };
+    });
+
+    (async function startGame() {
+      var status = document.getElementById('compilingmessage');
+      status.style.display = 'block';
+      status.textContent = 'Connecting to the game files on GitHub...';
+      try {
+        var response = await fetch('ProjectHNAR-HTML5-Shipping.UE4.js');
+        if (!response.ok) throw new Error('Could not download the game loader (HTTP ' + response.status + ').');
+        var runtime = await response.text();
+        var fileProtocolCheck = "var isFileProtocol = name.indexOf('file://') != -1 || location.protocol.indexOf('file') != -1;";
+        if (!runtime.includes(fileProtocolCheck)) throw new Error('The UE4 loader changed; this launcher needs an update.');
+        runtime = runtime.replace(fileProtocolCheck, 'var isFileProtocol = false;');
+        var script = document.createElement('script');
+        script.textContent = runtime;
+        document.body.appendChild(script);
+      } catch (error) {
+        console.error(error);
+        status.textContent = 'Could not start the game: ' + error.message;
+      }
+    })();
+  </script>
+</body>
+</html>
