@@ -48,6 +48,11 @@
     }
 
     var downloadProgressTimer = setInterval(function() {
+      if (!document.getElementById('compilingmessage')) {
+        clearInterval(downloadProgressTimer);
+        return;
+      }
+
       var progress = Module.assetDownloadProgress || {};
       var urls = Object.keys(progress);
       if (!urls.length) return;
@@ -69,7 +74,6 @@
       document.getElementById('downloadProgressBytes').textContent = formatProgressBytes(current) + ' of ' + formatProgressBytes(total);
       document.getElementById('downloadProgressLabel').textContent = finished ? 'Downloads complete — preparing the game...' : 'Downloading game files';
 
-      if (!document.getElementById('compilingmessage')) clearInterval(downloadProgressTimer);
     }, 200);
 
     Module.preRun.push(function() {
@@ -102,7 +106,8 @@
     });
 
     (async function startGame() {
-      var status = document.getElementById('compilingmessage');
+      var statusPanel = document.getElementById('compilingmessage');
+      var status = document.getElementById('downloadProgressLabel');
       var assetRoot = 'https://raw.githubusercontent.com/MasterPDiddy9/ProjectHNAR-HTML5/main/';
 
       async function getText(path) {
@@ -130,7 +135,7 @@
         document.head.appendChild(style);
       }
 
-      status.style.display = 'block';
+      statusPanel.style.display = 'block';
       status.textContent = 'Connecting to the game files on GitHub...';
       try {
         await injectStyle('bootstrap/css/bootstrap.min.css');
