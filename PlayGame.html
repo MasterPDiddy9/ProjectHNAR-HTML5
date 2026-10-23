@@ -5,8 +5,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Project HNAR</title>
-  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
-  <link rel="stylesheet" href="ProjectHNAR-HTML5-Shipping.css">
   <style>
     html, body { min-height: 100%; }
     #compilingmessage { z-index: 2; }
@@ -16,8 +14,6 @@
     #downloadProgress .progress-bar { transition: width 150ms linear; }
     #downloadProgressBytes { text-align: center; font-size: 12px; }
   </style>
-  <script src="jquery/jquery-2.1.3.min.js"></script>
-  <script src="bootstrap/js/bootstrap.min.js"></script>
 </head>
 <body>
   <div class="wrapper" id="mainarea">
@@ -107,12 +103,41 @@
 
     (async function startGame() {
       var status = document.getElementById('compilingmessage');
+      var assetRoot = 'https://raw.githubusercontent.com/MasterPDiddy9/ProjectHNAR-HTML5/main/';
+
+      async function getText(path) {
+        var response = await fetch(new URL(path, assetRoot));
+        if (!response.ok) throw new Error('Could not load ' + path + ' (HTTP ' + response.status + ').');
+        return response.text();
+      }
+
+      function injectScript(source) {
+        var script = document.createElement('script');
+        script.textContent = source;
+        document.body.appendChild(script);
+      }
+
+      async function injectStyle(path) {
+        var cssUrl = new URL(path, assetRoot);
+        var css = await getText(path);
+        css = css.replace(/url\(([^)]+)\)/gi, function(match, value) {
+          value = value.trim().replace(/^['"]|['"]$/g, '');
+          if (/^(data:|https?:|\/\/|#)/i.test(value)) return match;
+          return "url('" + new URL(value, cssUrl).href + "')";
+        });
+        var style = document.createElement('style');
+        style.textContent = css;
+        document.head.appendChild(style);
+      }
+
       status.style.display = 'block';
       status.textContent = 'Connecting to the game files on GitHub...';
       try {
-        var response = await fetch('ProjectHNAR-HTML5-Shipping.UE4.js');
-        if (!response.ok) throw new Error('Could not download the game loader (HTTP ' + response.status + ').');
-        var runtime = await response.text();
+        await injectStyle('bootstrap/css/bootstrap.min.css');
+        await injectStyle('ProjectHNAR-HTML5-Shipping.css');
+        injectScript(await getText('jquery/jquery-2.1.3.min.js'));
+        injectScript(await getText('bootstrap/js/bootstrap.min.js'));
+        var runtime = await getText('ProjectHNAR-HTML5-Shipping.UE4.js');
         runtime = runtime.replace(/\r\n/g, '\n');
         var fileProtocolCheck = "var isFileProtocol = name.indexOf('file://') != -1 || location.protocol.indexOf('file') != -1;";
         if (!runtime.includes(fileProtocolCheck)) throw new Error('The UE4 loader changed; this launcher needs an update.');
