@@ -11,6 +11,10 @@
     html, body { min-height: 100%; }
     #compilingmessage { z-index: 2; }
     .launcher-note { color: #ddd; text-align: center; margin: 8px auto; max-width: 900px; }
+    #downloadProgressPanel { width: min(680px, calc(100vw - 40px)); margin: 0 auto 10px; text-align: left; white-space: normal; }
+    #downloadProgressHeading { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 5px; font-weight: 600; }
+    #downloadProgress .progress-bar { transition: width 150ms linear; }
+    #downloadProgressBytes { text-align: center; font-size: 12px; }
   </style>
   <script src="jquery/jquery-2.1.3.min.js"></script>
   <script src="bootstrap/js/bootstrap.min.js"></script>
@@ -18,6 +22,13 @@
 <body>
   <div class="wrapper" id="mainarea">
     <div class="alert alert-warning centered-axis-xy" style="min-height:20px;display:none" role="alert" id="compilingmessage">
+      <div id="downloadProgressPanel">
+        <div id="downloadProgressHeading"><span id="downloadProgressLabel">Preparing download...</span><span id="downloadProgressPercent">0%</span></div>
+        <div class="progress" id="downloadProgress" role="progressbar" aria-label="Game loading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div id="downloadProgressBar" class="progress-bar progress-bar-info progress-bar-striped active" style="width:0%"></div>
+        </div>
+        <div id="downloadProgressBytes">Waiting for the game files...</div>
+      </div>
       <div id="loadTasks"></div>
     </div>
     <canvas tabindex="0" id="canvas" class="emscripten" oncontextmenu="event.preventDefault()" style="display:none"></canvas>
@@ -34,6 +45,37 @@
   <script>
     var Module = window.Module || {};
     Module.preRun = Module.preRun || [];
+
+    function formatProgressBytes(bytes) {
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KiB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MiB';
+    }
+
+    var downloadProgressTimer = setInterval(function() {
+      var progress = Module.assetDownloadProgress || {};
+      var urls = Object.keys(progress);
+      if (!urls.length) return;
+
+      var current = 0;
+      var total = 0;
+      var finished = true;
+      urls.forEach(function(url) {
+        var item = progress[url];
+        current += item.current || 0;
+        total += item.total || 0;
+        finished = finished && !!item.finished;
+      });
+
+      var percent = total ? Math.min(100, Math.floor(current * 100 / total)) : 0;
+      document.getElementById('downloadProgressBar').style.width = percent + '%';
+      document.getElementById('downloadProgressPercent').textContent = percent + '%';
+      document.getElementById('downloadProgress').setAttribute('aria-valuenow', percent);
+      document.getElementById('downloadProgressBytes').textContent = formatProgressBytes(current) + ' of ' + formatProgressBytes(total);
+      document.getElementById('downloadProgressLabel').textContent = finished ? 'Downloads complete — preparing the game...' : 'Downloading game files';
+
+      if (!document.getElementById('compilingmessage')) clearInterval(downloadProgressTimer);
+    }, 200);
+
     Module.preRun.push(function() {
       Module._UE_SaveGame = function(slotNamePtr, userIndex, dataPtr, dataSize) {
         try {
@@ -71,9 +113,41 @@
         var response = await fetch('ProjectHNAR-HTML5-Shipping.UE4.js');
         if (!response.ok) throw new Error('Could not download the game loader (HTTP ' + response.status + ').');
         var runtime = await response.text();
+        runtime = runtime.replace(/\r\n/g, '\n');
         var fileProtocolCheck = "var isFileProtocol = name.indexOf('file://') != -1 || location.protocol.indexOf('file') != -1;";
         if (!runtime.includes(fileProtocolCheck)) throw new Error('The UE4 loader changed; this launcher needs an update.');
         runtime = runtime.replace(fileProtocolCheck, 'var isFileProtocol = false;');
+
+        // Keep the save callbacks registered above when the UE4 loader initializes Module.
+        if (!runtime.includes('var Module = {')) throw new Error('The UE4 module initializer changed; this launcher needs an update.');
+        runtime = runtime.replace('var Module = {', 'var Module = Object.assign(window.Module || {}, {');
+        var moduleInitEnd = /(UE4_indexedDBVersion:\s*[^,\n]+,[^\n]*\n)\};/;
+        if (!moduleInitEnd.test(runtime)) throw new Error('The UE4 module initializer changed; this launcher needs an update.');
+        runtime = runtime.replace(moduleInitEnd, '$1});');
+
+        // Stream the large split data file so the progress bar moves while each 45 MiB part downloads.
+        var partReadLine = 'var part = await response.arrayBuffer();';
+        if (!runtime.includes(partReadLine)) throw new Error('The UE4 data downloader changed; this launcher needs an update.');
+        var streamingPartRead = [
+          'var partReader = response.body.getReader();',
+          'var partChunks = [];',
+          'var partLength = 0;',
+          'while (true) {',
+          '  var partResult = await partReader.read();',
+          '  if (partResult.done) break;',
+          '  partChunks.push(partResult.value);',
+          '  partLength += partResult.value.byteLength;',
+          '  reportDownloadProgress(url, loaded + partLength, total, false);',
+          '}',
+          'var part = new Uint8Array(partLength);',
+          'var partOffset = 0;',
+          'for (var chunkIndex = 0; chunkIndex < partChunks.length; chunkIndex++) {',
+          '  part.set(partChunks[chunkIndex], partOffset);',
+          '  partOffset += partChunks[chunkIndex].byteLength;',
+          '}'
+        ].join('\n');
+        runtime = runtime.replace(partReadLine, streamingPartRead);
+
         var script = document.createElement('script');
         script.textContent = runtime;
         document.body.appendChild(script);
