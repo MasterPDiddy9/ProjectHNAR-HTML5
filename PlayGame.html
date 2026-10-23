@@ -13,6 +13,7 @@
     #downloadProgressHeading { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 5px; font-weight: 600; }
     #downloadProgress .progress-bar { transition: width 150ms linear; }
     #downloadProgressBytes { text-align: center; font-size: 12px; }
+    #lightingTip { margin: 9px 0 0; color: #333; text-align: center; }
   </style>
 </head>
 <body>
@@ -24,6 +25,7 @@
           <div id="downloadProgressBar" class="progress-bar progress-bar-info progress-bar-striped active" style="width:0%"></div>
         </div>
         <div id="downloadProgressBytes">Waiting for the game files...</div>
+        <p id="lightingTip">If the game is too dark, go to Settings and turn Shadows to Low.</p>
       </div>
       <div id="loadTasks"></div>
     </div>
