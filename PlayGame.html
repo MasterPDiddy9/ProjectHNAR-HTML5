@@ -13,7 +13,6 @@
     #downloadProgressHeading { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 5px; font-weight: 600; }
     #downloadProgress .progress-bar { transition: width 150ms linear; }
     #downloadProgressBytes { text-align: center; font-size: 12px; }
-    #lightingTip { margin: 9px 0 0; color: #333; text-align: center; }
   </style>
 </head>
 <body>
@@ -25,7 +24,6 @@
           <div id="downloadProgressBar" class="progress-bar progress-bar-info progress-bar-striped active" style="width:0%"></div>
         </div>
         <div id="downloadProgressBytes">Waiting for the game files...</div>
-        <p id="lightingTip">If the game is too dark, go to Settings and turn Shadows to Low.</p>
       </div>
       <div id="loadTasks"></div>
     </div>
@@ -37,7 +35,7 @@
     <button type="button" id="clear_indexeddb" class="btn btn-primary" onclick="try { deleteIndexedDBStorage(); } catch(e) { console.error(e); }" title="Clear browser cache" style="display:none">Clear browser cache</button>
     <button type="button" id="fullscreen_request" class="btn btn-primary" title="Fullscreen" style="display:none">Fullscreen</button>
   </div>
-  <p class="launcher-note">This launcher loads the game files from GitHub. Keep this file and an internet connection available while playing.</p>
+  <p class="launcher-note">This launcher loads the game files from GitHub. Keep this file and an internet connection available while playing. If the game is too dark, go to Settings and turn Shadows to Low.</p>
   <div class="texthalf text-normal jumbotron" id="logwindow" style="display:none"></div>
 
   <script>
