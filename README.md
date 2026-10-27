@@ -8,4 +8,6 @@ The compressed game data is split into numbered 45 MiB chunks to stay below GitH
 
 Download [`PlayGame.html`](PlayGame.html) to your computer and open it in a current desktop browser. It loads the game files from this public repository over HTTPS, so the launcher needs an internet connection. The first launch downloads the large game data; later launches may reuse the browser's cache. Save games are stored in that browser's local storage.
 
+For a launcher that always opens the latest published version, download [`AutoUpdate.html`](AutoUpdate.html) and open it. It redirects to the live GitHub Pages launcher, so updates appear there after they are published. Saves remain separate between the local `PlayGame.html` file and the hosted game; use the save export/import buttons to move a save between them.
+
 You can also play from [GitHub Pages](https://masterpdiddy9.github.io/ProjectHNAR-HTML5/). This repository contains the packaged HTML5 build, not the Unreal Engine source project.
