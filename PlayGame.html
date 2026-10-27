@@ -13,6 +13,8 @@
     #downloadProgressHeading { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 5px; font-weight: 600; }
     #downloadProgress .progress-bar { transition: width 150ms linear; }
     #downloadProgressBytes { text-align: center; font-size: 12px; }
+    #saveControls { margin-top: 8px; }
+    #saveMessage { display: inline-block; margin-left: 8px; color: #ddd; }
   </style>
 </head>
 <body>
@@ -34,6 +36,12 @@
     <button type="button" id="resume" class="btn btn-primary" onclick="try { Module.resumeMainLoop(); $('#pause').show().focus(); $('#resume').hide(); } catch(e) { console.error(e); }" title="Resume" style="display:none">Resume</button>
     <button type="button" id="clear_indexeddb" class="btn btn-primary" onclick="try { deleteIndexedDBStorage(); } catch(e) { console.error(e); }" title="Clear browser cache" style="display:none">Clear browser cache</button>
     <button type="button" id="fullscreen_request" class="btn btn-primary" title="Fullscreen" style="display:none">Fullscreen</button>
+    <span id="saveControls">
+      <button type="button" id="exportSave" class="btn btn-primary">Export Save</button>
+      <button type="button" id="importSave" class="btn btn-primary">Import Save</button>
+      <input type="file" id="saveFileInput" accept=".json,application/json" style="display:none" aria-label="Choose a game save backup file">
+      <span id="saveMessage" role="status" aria-live="polite"></span>
+    </span>
   </div>
   <p class="launcher-note">This launcher loads the game files from GitHub. Keep this file and an internet connection available while playing. If the game is too dark, go to Settings and turn Shadows to Low.</p>
   <div class="texthalf text-normal jumbotron" id="logwindow" style="display:none"></div>
@@ -41,6 +49,105 @@
   <script>
     var Module = window.Module || {};
     Module.preRun = Module.preRun || [];
+
+    (function setupSaveTransfer() {
+      var savePrefix = 'UESave_';
+      var status = document.getElementById('saveMessage');
+      var fileInput = document.getElementById('saveFileInput');
+
+      function getSaveEntries() {
+        var entries = [];
+        for (var i = 0; i < localStorage.length; i++) {
+          var key = localStorage.key(i);
+          if (key && key.indexOf(savePrefix) === 0) entries.push([key, localStorage.getItem(key)]);
+        }
+        return entries;
+      }
+
+      document.getElementById('exportSave').addEventListener('click', function() {
+        try {
+          var entries = getSaveEntries();
+          if (!entries.length) {
+            status.textContent = 'No save slots found in this browser.';
+            return;
+          }
+          var backup = {
+            format: 'projecthnar-save-backup',
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            saves: entries.map(function(entry) { return { key: entry[0], data: entry[1] }; })
+          };
+          var blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+          var url = URL.createObjectURL(blob);
+          var link = document.createElement('a');
+          link.href = url;
+          link.download = 'ProjectHNAR-save-' + new Date().toISOString().slice(0, 10) + '.json';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+          status.textContent = 'Save backup downloaded.';
+        } catch (error) {
+          console.error('[Save transfer] Export failed:', error);
+          status.textContent = 'Could not export the save: ' + error.message;
+        }
+      });
+
+      document.getElementById('importSave').addEventListener('click', function() {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener('change', function() {
+        var file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function() {
+          try {
+            var backup = JSON.parse(reader.result);
+            if (!backup || backup.format !== 'projecthnar-save-backup' || backup.version !== 1 || !Array.isArray(backup.saves) || !backup.saves.length) {
+              throw new Error('This file is not a valid Project HNAR save backup.');
+            }
+            var imported = [];
+            backup.saves.forEach(function(save) {
+              if (!save || typeof save.key !== 'string' || save.key.indexOf(savePrefix) !== 0 || typeof save.data !== 'string' || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(save.data)) {
+                throw new Error('The backup contains an invalid save slot.');
+              }
+              atob(save.data);
+              if (imported.some(function(entry) { return entry[0] === save.key; })) throw new Error('The backup contains a duplicate save slot.');
+              imported.push([save.key, save.data]);
+            });
+
+            var previous = getSaveEntries();
+            var prompt = previous.length
+              ? 'Import ' + imported.length + ' save slot(s)? This replaces the save slots currently stored by this browser for this game.'
+              : 'Import ' + imported.length + ' save slot(s) into this browser?';
+            if (!window.confirm(prompt + ' The page will reload afterward so the game loads the imported saves.')) return;
+
+            try {
+              previous.forEach(function(entry) { localStorage.removeItem(entry[0]); });
+              imported.forEach(function(entry) { localStorage.setItem(entry[0], entry[1]); });
+            } catch (writeError) {
+              getSaveEntries().forEach(function(entry) { localStorage.removeItem(entry[0]); });
+              previous.forEach(function(entry) { localStorage.setItem(entry[0], entry[1]); });
+              throw writeError;
+            }
+
+            status.textContent = 'Save imported. Reloading the game...';
+            setTimeout(function() { window.location.reload(); }, 700);
+          } catch (error) {
+            console.error('[Save transfer] Import failed:', error);
+            status.textContent = 'Could not import the save: ' + error.message;
+          } finally {
+            fileInput.value = '';
+          }
+        };
+        reader.onerror = function() {
+          status.textContent = 'Could not read that save backup file.';
+          fileInput.value = '';
+        };
+        reader.readAsText(file);
+      });
+    })();
 
     function formatProgressBytes(bytes) {
       if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KiB';
