@@ -55,11 +55,15 @@
       var status = document.getElementById('saveMessage');
       var fileInput = document.getElementById('saveFileInput');
 
+      function isGameSaveKey(key) {
+        return key.indexOf(savePrefix) === 0 || key === 'jStorage' || key === 'jStorage_update';
+      }
+
       function getSaveEntries() {
         var entries = [];
         for (var i = 0; i < localStorage.length; i++) {
           var key = localStorage.key(i);
-          if (key && key.indexOf(savePrefix) === 0) entries.push([key, localStorage.getItem(key)]);
+          if (key && isGameSaveKey(key)) entries.push([key, localStorage.getItem(key)]);
         }
         return entries;
       }
@@ -68,7 +72,7 @@
         try {
           var entries = getSaveEntries();
           if (!entries.length) {
-            status.textContent = 'No save slots found in this browser.';
+            status.textContent = 'No game save data found in this browser.';
             return;
           }
           var backup = {
@@ -109,18 +113,21 @@
             }
             var imported = [];
             backup.saves.forEach(function(save) {
-              if (!save || typeof save.key !== 'string' || save.key.indexOf(savePrefix) !== 0 || typeof save.data !== 'string' || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(save.data)) {
+              if (!save || typeof save.key !== 'string' || !isGameSaveKey(save.key) || typeof save.data !== 'string') {
                 throw new Error('The backup contains an invalid save slot.');
               }
-              atob(save.data);
+              if (save.key.indexOf(savePrefix) === 0) {
+                if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(save.data)) throw new Error('The backup contains invalid encoded save data.');
+                atob(save.data);
+              }
               if (imported.some(function(entry) { return entry[0] === save.key; })) throw new Error('The backup contains a duplicate save slot.');
               imported.push([save.key, save.data]);
             });
 
             var previous = getSaveEntries();
             var prompt = previous.length
-              ? 'Import ' + imported.length + ' save slot(s)? This replaces the save slots currently stored by this browser for this game.'
-              : 'Import ' + imported.length + ' save slot(s) into this browser?';
+              ? 'Import ' + imported.length + ' save item(s)? This replaces this game’s save data currently stored by this browser.'
+              : 'Import ' + imported.length + ' save item(s) into this browser?';
             if (!window.confirm(prompt + ' The page will reload afterward so the game loads the imported saves.')) return;
 
             try {
