@@ -275,13 +275,13 @@
         if (!runtime.includes(downloadStart)) throw new Error('The UE4 data downloader changed; this launcher needs an update.');
         var xhrOpenLine = "xhr.open('GET', url, true);";
         if (!runtime.includes(xhrOpenLine)) throw new Error('The UE4 asset downloader changed; this launcher needs an update.');
-        runtime = runtime.replace(xhrOpenLine, "xhr.open('GET', url + (url.indexOf('?') === -1 ? '?v=9b35c72' : '&v=9b35c72'), true);");
+        runtime = runtime.replace(xhrOpenLine, "xhr.open('GET', url + (url.indexOf('?') === -1 ? '?v=lighting-20261029' : '&v=lighting-20261029'), true);");
         var splitDataDownload = [
           downloadStart,
           "\tif (/ProjectHNAR1-HTML5-Shipping\\.data\\.gz(?:[?#]|$)/.test(url)) {",
           "\t\treturn (async function() {",
           "\t\t\tif (typeof DecompressionStream !== 'function') throw new Error('This browser does not support gzip decompression for split game data.');",
-          "\t\t\tvar total = 1137187757;",
+          "\t\t\tvar total = 1137159513;",
           "\t\t\tvar partCount = 25;",
           "\t\t\tvar loaded = 0;",
           "\t\t\tvar parts = [];",
