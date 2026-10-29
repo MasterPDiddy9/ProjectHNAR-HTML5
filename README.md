@@ -2,7 +2,7 @@
 
 Browser build for the Hello Neighbor fangame, exported from UE4.27 HTML5 (ES3/WebGL 2).
 
-The compressed game data is split into numbered 45 MiB chunks to stay below GitHub's per-file upload limit. The UE4 loader fetches each chunk, joins them in order, decompresses the gzip stream, then hands it to the original package loader.
+The current compressed game data is split into 25 numbered chunks of at most 45 MiB to stay below GitHub's per-file upload limit. The launcher fetches each chunk, joins them in order, decompresses the gzip stream, and passes the complete package to UE4. The runtime and save-transfer controls are provided by `PlayGame.html`.
 
 ## Launch from a downloaded HTML file
 

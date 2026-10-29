@@ -1,4 +1,4 @@
-// javascript code used with Epic Games HTML5 projects
+﻿// javascript code used with Epic Games HTML5 projects
 //
 // much of this is for UE4 development purposes.
 //
@@ -74,8 +74,8 @@ var Module = {
 
 	assetDownloadProgress: {}, // Track how many bytes of each needed asset has been downloaded so far.
 
-	UE4_indexedDBName: 'UE4_assetDatabase_ProjectHNAR', // this should be an ascii ID string without special characters that is unique to the project that is being packaged
-	UE4_indexedDBVersion: 202602242228, // Bump this number to invalidate existing IDB storages in browsers.
+	UE4_indexedDBName: 'UE4_assetDatabase_ProjectHNAR1', // this should be an ascii ID string without special characters that is unique to the project that is being packaged
+	UE4_indexedDBVersion: 202610292130, // Bump this number to invalidate existing IDB storages in browsers.
 };
 
 
@@ -93,7 +93,7 @@ if ('') {
 	//}
 }
 
-Module.arguments = sessionStorageCommandLine != null ? [sessionStorageCommandLine] : ['../../../ProjectHNAR/ProjectHNAR.uproject','-stdout',];
+Module.arguments = sessionStorageCommandLine != null ? [sessionStorageCommandLine] : ['../../../ProjectHNAR1/ProjectHNAR1.uproject','-stdout',];
 
 // UE4 Editor or UE4 Frontend with assets "cook on the fly"?
 if (location.host != "" && (location.search.indexOf('cookonthefly') != -1)) {
@@ -453,8 +453,7 @@ Module['UE4_fullscreenFilteringMode'] = 0;
 
 var enableReadFromIndexedDB = (location.search.indexOf('noidbread') == -1);
 var enableWriteToIndexedDB = enableReadFromIndexedDB && (location.search.indexOf('noidbwrite') == -1);
-enableReadFromIndexedDB = false;
-enableWriteToIndexedDB = false;
+
 
 if (!enableReadFromIndexedDB) console.log('Running with IndexedDB access disabled.');
 else if (!enableWriteToIndexedDB) console.log('Running in read-only IndexedDB access mode.');
@@ -887,30 +886,6 @@ function reportDownloadProgress(url, downloadedBytes, totalBytes, finished) {
 }
 
 function download(url, responseType) {
-	if (/ProjectHNAR-HTML5-Shipping\.data\.gz(?:[?#]|$)/.test(url)) {
-		return (async function() {
-			if (typeof DecompressionStream !== 'function') throw new Error('This browser does not support gzip decompression for split game data.');
-			var baseUrl = url.split(/[?#]/)[0];
-			var parts = [];
-			var loaded = 0;
-			var total = 876776303;
-			var partCount = 19;
-			reportDownloadProgress(url, 0, total);
-			for (var i = 1; i <= partCount; i++) {
-				var partName = baseUrl + '.part' + String(i).padStart(2, '0');
-				var response = await fetch(partName);
-				if (!response.ok) throw new Error('Failed to fetch game data part: ' + partName + ' (' + response.status + ')');
-				var part = await response.arrayBuffer();
-				parts.push(part);
-				loaded += part.byteLength;
-				reportDownloadProgress(url, loaded, total, loaded >= total);
-			}
-			var compressed = new Blob(parts);
-			var stream = compressed.stream().pipeThrough(new DecompressionStream('gzip'));
-			var decompressed = new Response(stream);
-			return responseType === 'blob' ? await decompressed.blob() : await decompressed.arrayBuffer();
-		})();
-	}
 	return new Promise(function(resolve, reject) {
 		var xhr = new XMLHttpRequest();
 		xhr.open('GET', url, true);
@@ -1261,22 +1236,22 @@ $(document).ready(function() {
 
 		// ----------------------------------------
 		// MORE JS
-		var dataJsDownload = fetchOrDownloadAndStore(db, Module.locateFile('ProjectHNAR-HTML5-Shipping'+dataVariant+'.data.js'));
+		var dataJsDownload = fetchOrDownloadAndStore(db, Module.locateFile('ProjectHNAR1-HTML5-Shipping'+dataVariant+'.data.js'));
 		var utilityJsDownload = fetchOrDownloadAndStore(db, Module.locateFile('Utility.js')).then(addScriptToDom);
 		var dataDownload =
 /* // The following code would download and store the .data file as a Blob, which should be more efficient than loading an ArrayBuffer. However that seems to be buggy, so avoid it for now.
-			fetchOrDownloadAndStore(db, Module.locateFile('ProjectHNAR-HTML5-Shipping.data')).then(function(dataBlob) {
+			fetchOrDownloadAndStore(db, Module.locateFile('ProjectHNAR1-HTML5-Shipping.data')).then(function(dataBlob) {
 				return readBlobToArrayBuffer(dataBlob).then(function(dataArrayBuffer) {
 					Module['preloadedPackages'] = {};
-					Module['preloadedPackages'][Module.locateFile('ProjectHNAR-HTML5-Shipping.data')] = dataArrayBuffer;
+					Module['preloadedPackages'][Module.locateFile('ProjectHNAR1-HTML5-Shipping.data')] = dataArrayBuffer;
 					return dataJsDownload.then(addScriptToDom);
 				})
 			});
 */
 // Instead as a fallback, download as ArrayBuffer. (TODO: Figure out the bugs with the above, and switch to using that one instead)
-			fetchOrDownloadAndStore(db, Module.locateFile('ProjectHNAR-HTML5-Shipping'+dataVariant+'.data'), 'arraybuffer').then(function(dataArrayBuffer) {
+			fetchOrDownloadAndStore(db, Module.locateFile('ProjectHNAR1-HTML5-Shipping'+dataVariant+'.data'), 'arraybuffer').then(function(dataArrayBuffer) {
 				Module['preloadedPackages'] = {};
-				Module['preloadedPackages'][Module.locateFile('ProjectHNAR-HTML5-Shipping'+dataVariant+'.data')] = dataArrayBuffer;
+				Module['preloadedPackages'][Module.locateFile('ProjectHNAR1-HTML5-Shipping'+dataVariant+'.data')] = dataArrayBuffer;
 				return dataJsDownload.then(addScriptToDom);
 			});
 

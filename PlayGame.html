@@ -253,7 +253,7 @@
       status.textContent = 'Connecting to the game files on GitHub...';
       try {
         await injectStyle('bootstrap/css/bootstrap.min.css');
-        await injectStyle('ProjectHNAR-HTML5-Shipping.css');
+        await injectStyle('ProjectHNAR1-HTML5-Shipping.css');
         injectScript(await getText('jquery/jquery-2.1.3.min.js'));
         injectScript(await getText('bootstrap/js/bootstrap.min.js'));
         var runtime = await getText('ProjectHNAR-HTML5-Shipping.UE4.js');
@@ -269,28 +269,38 @@
         if (!moduleInitEnd.test(runtime)) throw new Error('The UE4 module initializer changed; this launcher needs an update.');
         runtime = runtime.replace(moduleInitEnd, '$1});');
 
-        // Stream the large split data file so the progress bar moves while each 45 MiB part downloads.
-        var partReadLine = 'var part = await response.arrayBuffer();';
-        if (!runtime.includes(partReadLine)) throw new Error('The UE4 data downloader changed; this launcher needs an update.');
-        var streamingPartRead = [
-          'var partReader = response.body.getReader();',
-          'var partChunks = [];',
-          'var partLength = 0;',
-          'while (true) {',
-          '  var partResult = await partReader.read();',
-          '  if (partResult.done) break;',
-          '  partChunks.push(partResult.value);',
-          '  partLength += partResult.value.byteLength;',
-          '  reportDownloadProgress(url, loaded + partLength, total, false);',
-          '}',
-          'var part = new Uint8Array(partLength);',
-          'var partOffset = 0;',
-          'for (var chunkIndex = 0; chunkIndex < partChunks.length; chunkIndex++) {',
-          '  part.set(partChunks[chunkIndex], partOffset);',
-          '  partOffset += partChunks[chunkIndex].byteLength;',
-          '}'
+        // This build's data archive exceeds GitHub's per-file limit, so fetch
+        // the numbered chunks and decompress them before UE4 slices the package.
+        var downloadStart = 'function download(url, responseType) {';
+        if (!runtime.includes(downloadStart)) throw new Error('The UE4 data downloader changed; this launcher needs an update.');
+        var splitDataDownload = [
+          downloadStart,
+          "\tif (/ProjectHNAR1-HTML5-Shipping\\.data\\.gz(?:[?#]|$)/.test(url)) {",
+          "\t\treturn (async function() {",
+          "\t\t\tif (typeof DecompressionStream !== 'function') throw new Error('This browser does not support gzip decompression for split game data.');",
+          "\t\t\tvar total = 1137187757;",
+          "\t\t\tvar partCount = 25;",
+          "\t\t\tvar loaded = 0;",
+          "\t\t\tvar parts = [];",
+          "\t\t\tvar baseUrl = new URL('ProjectHNAR-HTML5-Shipping.data.gz', new URL(url, document.baseURI)).href;",
+          "\t\t\treportDownloadProgress(url, 0, total, false);",
+          "\t\t\tfor (var i = 1; i <= partCount; i++) {",
+          "\t\t\t\tvar partUrl = baseUrl + '.part' + String(i).padStart(2, '0');",
+          "\t\t\t\tvar response = await fetch(partUrl);",
+          "\t\t\t\tif (!response.ok) throw new Error('Failed to fetch game data part: ' + partUrl + ' (' + response.status + ')');",
+          "\t\t\t\tvar part = await response.arrayBuffer();",
+          "\t\t\t\tparts.push(part);",
+          "\t\t\t\tloaded += part.byteLength;",
+          "\t\t\t\treportDownloadProgress(url, loaded, total, i === partCount);",
+          "\t\t\t}",
+          "\t\t\tvar compressed = new Blob(parts);",
+          "\t\t\tvar stream = compressed.stream().pipeThrough(new DecompressionStream('gzip'));",
+          "\t\t\tvar bytes = await new Response(stream).arrayBuffer();",
+          "\t\t\treturn responseType === 'blob' ? new Blob([bytes]) : bytes;",
+          "\t\t})();",
+          "\t}"
         ].join('\n');
-        runtime = runtime.replace(partReadLine, streamingPartRead);
+        runtime = runtime.replace(downloadStart, splitDataDownload);
 
         var script = document.createElement('script');
         script.textContent = runtime;
