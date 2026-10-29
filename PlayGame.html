@@ -273,6 +273,9 @@
         // the numbered chunks and decompress them before UE4 slices the package.
         var downloadStart = 'function download(url, responseType) {';
         if (!runtime.includes(downloadStart)) throw new Error('The UE4 data downloader changed; this launcher needs an update.');
+        var xhrOpenLine = "xhr.open('GET', url, true);";
+        if (!runtime.includes(xhrOpenLine)) throw new Error('The UE4 asset downloader changed; this launcher needs an update.');
+        runtime = runtime.replace(xhrOpenLine, "xhr.open('GET', url + (url.indexOf('?') === -1 ? '?v=96d379c' : '&v=96d379c'), true);");
         var splitDataDownload = [
           downloadStart,
           "\tif (/ProjectHNAR1-HTML5-Shipping\\.data\\.gz(?:[?#]|$)/.test(url)) {",
