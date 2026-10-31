@@ -275,20 +275,20 @@
         if (!runtime.includes(downloadStart)) throw new Error('The UE4 data downloader changed; this launcher needs an update.');
         var xhrOpenLine = "xhr.open('GET', url, true);";
         if (!runtime.includes(xhrOpenLine)) throw new Error('The UE4 asset downloader changed; this launcher needs an update.');
-        runtime = runtime.replace(xhrOpenLine, "xhr.open('GET', url + (url.indexOf('?') === -1 ? '?v=candle-lights-20261030b' : '&v=candle-lights-20261030b'), true);");
+        runtime = runtime.replace(xhrOpenLine, "xhr.open('GET', url + (url.indexOf('?') === -1 ? '?v=lantern-test-20261030' : '&v=lantern-test-20261030'), true);");
         var splitDataDownload = [
           downloadStart,
           "\tif (/ProjectHNAR1-HTML5-Shipping\\.data\\.gz(?:[?#]|$)/.test(url)) {",
           "\t\treturn (async function() {",
           "\t\t\tif (typeof DecompressionStream !== 'function') throw new Error('This browser does not support gzip decompression for split game data.');",
-          "\t\t\tvar total = 1200796305;",
+          "\t\t\tvar total = 1200781999;",
           "\t\t\tvar partCount = 26;",
           "\t\t\tvar loaded = 0;",
           "\t\t\tvar parts = [];",
           "\t\t\tvar baseUrl = new URL('ProjectHNAR-HTML5-Shipping.data.gz', new URL(url, document.baseURI)).href;",
           "\t\t\treportDownloadProgress(url, 0, total, false);",
           "\t\t\tfor (var i = 1; i <= partCount; i++) {",
-          "\t\t\t\tvar partUrl = baseUrl + '.part' + String(i).padStart(2, '0') + '?v=candle-lights-20261030b';",
+          "\t\t\t\tvar partUrl = baseUrl + '.part' + String(i).padStart(2, '0') + '?v=lantern-test-20261030';",
           "\t\t\t\tvar response = await fetch(partUrl);",
           "\t\t\t\tif (!response.ok) throw new Error('Failed to fetch game data part: ' + partUrl + ' (' + response.status + ')');",
           "\t\t\t\tvar part = await response.arrayBuffer();",
