@@ -172,7 +172,7 @@
       if (!urls.length) return;
 
       var current = 0;
-      var total = 1200781827;
+      var total = 1200796305;
       var finished = true;
       urls.forEach(function(url) {
         var item = progress[url];
@@ -275,7 +275,7 @@
         if (!runtime.includes(downloadStart)) throw new Error('The UE4 data downloader changed; this launcher needs an update.');
         var xhrOpenLine = "xhr.open('GET', url, true);";
         if (!runtime.includes(xhrOpenLine)) throw new Error('The UE4 asset downloader changed; this launcher needs an update.');
-        runtime = runtime.replace(xhrOpenLine, "xhr.open('GET', url + (url.indexOf('?') === -1 ? '?v=levels-lighting-20261030' : '&v=levels-lighting-20261030'), true);");
+        runtime = runtime.replace(xhrOpenLine, "xhr.open('GET', url + (url.indexOf('?') === -1 ? '?v=candle-lights-20261030' : '&v=candle-lights-20261030'), true);");
         var splitDataDownload = [
           downloadStart,
           "\tif (/ProjectHNAR1-HTML5-Shipping\\.data\\.gz(?:[?#]|$)/.test(url)) {",
@@ -288,7 +288,7 @@
           "\t\t\tvar baseUrl = new URL('ProjectHNAR-HTML5-Shipping.data.gz', new URL(url, document.baseURI)).href;",
           "\t\t\treportDownloadProgress(url, 0, total, false);",
           "\t\t\tfor (var i = 1; i <= partCount; i++) {",
-          "\t\t\t\tvar partUrl = baseUrl + '.part' + String(i).padStart(2, '0') + '?v=levels-lighting-20261030';",
+          "\t\t\t\tvar partUrl = baseUrl + '.part' + String(i).padStart(2, '0') + '?v=candle-lights-20261030';",
           "\t\t\t\tvar response = await fetch(partUrl);",
           "\t\t\t\tif (!response.ok) throw new Error('Failed to fetch game data part: ' + partUrl + ' (' + response.status + ')');",
           "\t\t\t\tvar part = await response.arrayBuffer();",
